@@ -1,9 +1,6 @@
 # SECURE-AUTOMATION-ENGINE_flexiboost
-# SAE - Local Setup
 
 ## Requirements
-
-Install the following:
 
 * Docker Desktop
 * Node.js 22+
@@ -19,17 +16,17 @@ docker -v
 
 ---
 
-# Clone Repository
+## Clone Repository
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sae.git
+git clone https://github.com/NourhanDeifSayed/SECURE-AUTOMATION-ENGINE_flexiboost.git
 
-cd sae
+cd SECURE-AUTOMATION-ENGINE_flexiboost
 ```
 
 ---
 
-# Install Dependencies
+## Install Dependencies
 
 ```bash
 npm install
@@ -37,9 +34,7 @@ npm install
 
 ---
 
-# Start Infrastructure
-
-Start PostgreSQL and Redis:
+## Start Infrastructure
 
 ```bash
 docker compose up -d
@@ -51,7 +46,7 @@ Verify containers:
 docker ps
 ```
 
-Expected containers:
+Expected:
 
 ```txt
 sae_postgres
@@ -60,9 +55,7 @@ sae_redis
 
 ---
 
-# Apply Database Migrations
-
-Run migrations in order:
+## Apply Database Migrations
 
 ```bash
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/001_init.sql
@@ -76,7 +69,7 @@ docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/004_indexes.
 
 ---
 
-# Configure Application User
+## Configure Application User
 
 Open PostgreSQL:
 
@@ -99,13 +92,10 @@ Exit:
 
 ---
 
-# Verify Database Access
+## Verify Database Access
 
 ```bash
-docker exec -e PGPASSWORD=app_password \
--it sae_postgres \
-psql -U app_user -d sae \
--c "SELECT current_user;"
+docker exec -e PGPASSWORD=app_password -it sae_postgres psql -U app_user -d sae -c "SELECT current_user;"
 ```
 
 Expected output:
@@ -116,7 +106,7 @@ app_user
 
 ---
 
-# Start API Gateway
+## Start API Gateway
 
 Open a terminal:
 
@@ -132,7 +122,7 @@ API Gateway running on http://localhost:3000
 
 ---
 
-# Start Task Orchestrator
+## Start Task Orchestrator
 
 Open another terminal:
 
@@ -148,7 +138,7 @@ Task Orchestrator worker is running...
 
 ---
 
-# Verify Services
+## Verify Services
 
 Open:
 
@@ -167,19 +157,19 @@ Expected response:
 
 ---
 
-# Architecture Components
-
-The project starts the following services:
+## Components
 
 * PostgreSQL
 * Redis
 * API Gateway
 * BullMQ Worker
 
-Security features enabled:
+---
+
+## Security Features
 
 * Multi-Tenant Isolation
-* PostgreSQL Row Level Security (RLS)
+* PostgreSQL RLS
 * JWT Authentication
 * Tenant Context Middleware
 * Audit Logging
@@ -187,8 +177,6 @@ Security features enabled:
 
 ---
 
-# Current Status
+## Status
 
-```txt
-Phase 1 Secure Core Completed
-```
+Phase 1 Secure Core Completed.
