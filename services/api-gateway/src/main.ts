@@ -8,6 +8,7 @@ import { webhookRouter } from "./routes/webhook.routes";
 import { tenantMiddleware } from "./middleware/tenant.middleware";
 import { vaultRouter } from "../../credential-vault/src/vault.routes";
 import { connectorsRouter } from "./routes/connectors.routes";
+import { oauthRouter } from "./routes/oauth.routes";
 
 const app = express();
 const PORT = 3000;
@@ -31,6 +32,7 @@ app.use("/vault", tenantMiddleware, vaultRouter);
 app.use("/webhooks", webhookRouter);
 
 app.use("/connectors", tenantMiddleware, connectorsRouter);
+app.use("/oauth", tenantMiddleware, oauthRouter);
 
 app.listen(PORT, () => {
   console.log(`API Gateway running on http://localhost:${PORT}`);
