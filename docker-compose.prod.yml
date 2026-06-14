@@ -1,0 +1,154 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: flexiboost_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: sae
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    ports:
+      - "15432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    secrets:
+      - db_password
+
+  redis:
+    image: redis:7
+    container_name: flexiboost_redis_prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_prod_data:/data
+
+  api-gateway:
+    image: node:24-alpine
+    container_name: flexiboost_api_prod
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npm run dev:api"
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      CORS_ORIGIN: http://localhost:5173
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sae
+      DB_USER: app_user
+      DB_PASSWORD_FILE: /run/secrets/app_db_password
+
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+    volumes:
+      - ./:/app
+      - api_node_modules:/app/node_modules
+
+    depends_on:
+      - postgres
+      - redis
+
+    secrets:
+      - app_db_password
+      - jwt_secret
+      - encryption_key
+
+  worker:
+    image: node:24-alpine
+    container_name: flexiboost_worker_prod
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npm run dev:worker"
+
+    environment:
+      NODE_ENV: production
+
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: sae
+      DB_USER: app_user
+      DB_PASSWORD_FILE: /run/secrets/app_db_password
+
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      ENCRYPTION_KEY_FILE: /run/secrets/encryption_key
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+    volumes:
+      - ./:/app
+      - worker_node_modules:/app/node_modules
+
+    depends_on:
+      - postgres
+      - redis
+
+    secrets:
+      - app_db_password
+      - jwt_secret
+      - encryption_key
+
+  web-ui:
+    image: node:24-alpine
+    container_name: flexiboost_web_prod
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install --no-audit --no-fund && npm run dev:web -- --host 0.0.0.0"
+
+    ports:
+      - "5173:5173"
+
+    environment:
+      NODE_ENV: production
+      VITE_API_BASE_URL: http://localhost:3000
+
+    volumes:
+      - ./:/app
+      - web_node_modules:/app/node_modules
+
+    depends_on:
+      - api-gateway
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: flexiboost_prometheus_prod
+    restart: unless-stopped
+
+    ports:
+      - "9090:9090"
+
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus
+
+    depends_on:
+      - api-gateway
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+
+  app_db_password:
+    file: ./secrets/app_db_password.txt
+
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+
+  encryption_key:
+    file: ./secrets/encryption_key.txt
+
+volumes:
+  postgres_prod_data:
+  redis_prod_data:
+
+  api_node_modules:
+  worker_node_modules:
+  web_node_modules:
