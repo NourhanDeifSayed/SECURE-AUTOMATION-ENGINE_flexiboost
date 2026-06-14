@@ -1,5 +1,80 @@
 # SECURE-AUTOMATION-ENGINE_flexiboost
 
+Secure multi-tenant workflow automation platform designed with enterprise-grade security, compliance, monitoring, and operational controls.
+
+---
+
+## Overview
+
+SECURE-AUTOMATION-ENGINE_flexiboost is a secure automation platform that enables organizations to execute workflows across external systems while maintaining strict tenant isolation, encrypted credential management, auditability, and regulatory compliance.
+
+The platform provides:
+
+* Multi-tenant workflow execution
+* Secure credential storage and rotation
+* OAuth integrations
+* Connector framework
+* BullMQ-based orchestration
+* Comprehensive audit logging
+* GDPR compliance controls
+* Production monitoring
+* Enterprise deployment support
+
+---
+
+## Architecture
+
+### Core Components
+
+* Web UI
+* API Gateway
+* PostgreSQL
+* Redis
+* BullMQ Task Orchestrator
+* Credential Vault
+* OAuth Connection Store
+* Connector Framework
+* Audit Logging Engine
+* Prometheus Monitoring
+
+### High-Level Data Flow
+
+Operator → Web UI → API Gateway
+
+API Gateway → PostgreSQL
+
+API Gateway → Credential Vault
+
+API Gateway → Redis → Task Orchestrator → External Connectors
+
+API Gateway → Audit Log → WORM Archive
+
+---
+
+## Technology Stack
+
+### Backend
+
+* Node.js
+* TypeScript
+* Express
+* PostgreSQL
+* Redis
+* BullMQ
+
+### Frontend
+
+* React
+* Vite
+
+### Infrastructure
+
+* Docker
+* Docker Compose
+* Prometheus
+
+---
+
 ## Requirements
 
 * Docker Desktop
@@ -36,8 +111,16 @@ npm install
 
 ## Start Infrastructure
 
+Development:
+
 ```bash
 docker compose up -d
+```
+
+Production:
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 Verify containers:
@@ -46,498 +129,277 @@ Verify containers:
 docker ps
 ```
 
-Expected:
-
-```txt
-sae_postgres
-sae_redis
-```
-
 ---
 
-## Apply Database Migrations
+## Database Setup
 
-Run all migrations in order:
+Apply migrations in sequence:
 
 ```bash
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/001_init.sql
-
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/002_rls.sql
-
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/003_roles.sql
-
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/004_indexes.sql
-
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/005_oauth.sql
-
 docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/006_oauth_refresh_iv.sql
+docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/007_tenant_settings.sql
+docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/008_gdpr_erasure.sql
+docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/009_ttl_pruning.sql
+docker exec -i sae_postgres psql -U postgres -d sae < db/migrations/010_audit_hash_chain.sql
 ```
 
 ---
 
-## Configure Application User
+## Local Development
 
-Open PostgreSQL:
-
-```bash
-docker exec -it sae_postgres psql -U postgres -d sae
-```
-
-Run:
-
-```sql
-ALTER ROLE app_user
-WITH LOGIN PASSWORD 'app_password';
-```
-
-Exit:
-
-```sql
-\q
-```
-
----
-
-## Verify Database Access
-
-```bash
-docker exec -e PGPASSWORD=app_password -it sae_postgres psql -U app_user -d sae -c "SELECT current_user;"
-```
-
-Expected output:
-
-```txt
-app_user
-```
-
----
-
-## Start API Gateway
-
-Open a terminal:
+Start API Gateway:
 
 ```bash
 npm run dev:api
 ```
 
-Expected:
-
-```txt
-API Gateway running on http://localhost:3000
-```
-
----
-
-## Start Task Orchestrator
-
-Open another terminal:
+Start Worker:
 
 ```bash
 npm run dev:worker
 ```
 
-Expected:
+Start Web UI:
 
-```txt
-Task Orchestrator worker is running...
+```bash
+npm run dev:web
 ```
 
 ---
 
-## Verify Services
+## Health and Monitoring
 
-Open:
+Health Endpoint:
 
-```txt
-http://localhost:3000/health
+```http
+GET /health
 ```
 
-Expected response:
+Metrics Endpoint:
 
-```json
-{
-  "status": "ok",
-  "service": "api-gateway"
-}
+```http
+GET /metrics
+```
+
+Prometheus:
+
+```
+http://localhost:9090
+```
+
+Web UI:
+
+```
+http://localhost:5173
+```
+
+API Gateway:
+
+```
+http://localhost:3000
 ```
 
 ---
 
-# Components
-
-* PostgreSQL
-* Redis
-* API Gateway
-* BullMQ Worker
-* Credential Vault
-* OAuth Connection Store
-* Slack Connector
-* Stripe Connector
-* Google Workspace Connector
-* Generic HTTP Connector
-
----
-
-# Security Features
+## Security Features
 
 * Multi-Tenant Isolation
-* PostgreSQL Row Level Security
+* PostgreSQL Row Level Security (RLS)
 * JWT Authentication
 * Tenant Context Middleware
+* Restricted CORS Configuration
 * Audit Logging
 * Queue Isolation
 * Credential Encryption at Rest
+* AES-Based Secret Protection
 * OAuth Token Encryption
 * Access Token Refresh
 * Refresh Token Rotation
+* Credential Rotation
+* Credential Rotation Audit Logging
 * Webhook HMAC Verification
 * Replay Attack Protection
+* Security Penetration Testing
 
 ---
 
-# Phase 1 — Secure Core
+## Compliance Features
 
-## Status
+### GDPR Right to Erasure
 
-Completed.
+Supports deletion of tenant-specific data across all relevant tables.
 
-## Implemented
+Verification script:
 
-* PostgreSQL schema with tenant isolation
-* Row Level Security policies
-* JWT authentication
-* Tenant context middleware
-* Audit log protection
-* BullMQ and Redis worker execution
-* Tenant-scoped queue processing
-* Workflow execution logging
-
----
-
-# Phase 2 — Secure Credentials, OAuth, Webhooks, and Connectors
-
-## Status
-
-Completed.
-
----
-
-## Completed Phase 2 Features
-
-### 1. Credential Vault
-
-The Credential Vault stores third-party secrets such as API keys.
-
-Implemented:
-
-* Create credential
-* List credentials
-* Retrieve credential
-* Decrypt credential
-* Delete credential
-
-Endpoints:
-
-```http
-POST /vault
-GET /vault
-GET /vault/:id
-DELETE /vault/:id
+```bash
+scripts/test-gdpr-erasure.ps1
 ```
 
 ---
 
-### 2. Credential Encryption at Rest
+### TTL Data Retention
 
-Secrets are encrypted before they are saved in PostgreSQL.
+Execution logs are automatically pruned after their retention period expires.
 
-The database stores:
+Verification script:
 
-* encrypted_payload
-* iv
-
-The database does not store plaintext secrets.
-
----
-
-### 3. Credential Rotation
-
-Credential Rotation allows replacing an old secret with a new secret without deleting the credential record.
-
-Endpoint:
-
-```http
-POST /vault/:id/rotate
-```
-
-The rotation process:
-
-* Receives a new secret
-* Encrypts the new secret
-* Updates the encrypted payload
-* Updates the IV
-* Updates the rotated_at timestamp
-
----
-
-### 4. Credential Rotation Audit Logging
-
-Every credential rotation is logged.
-
-Audit records include:
-
-* credential_id
-* tenant_id
-* rotated_by
-* rotated_at
-
-Table:
-
-```sql
-credential_rotation_audit
+```bash
+scripts/test-ttl-pruning.ps1
 ```
 
 ---
 
-### 5. Webhook HMAC Verification
+### Audit Hash Chaining
 
-Incoming webhooks are verified using HMAC-SHA256.
+Audit records are cryptographically chained to detect tampering.
 
-Endpoint:
+Backfill script:
 
-```http
-POST /webhooks/test
-```
-
-Validation rules:
-
-* Missing signature is rejected
-* Invalid signature is rejected
-* Valid signature is accepted
-
-Header:
-
-```http
-x-signature
+```bash
+scripts/backfill-audit-hashes.ps1
 ```
 
 ---
 
-### 6. Replay Attack Prevention
+### WORM Audit Archival
 
-Replay protection prevents the same webhook from being processed more than once.
+Audit logs can be exported to immutable archive storage.
 
-Implementation:
+Archive script:
 
-* Redis stores webhook IDs temporarily
-* First request is accepted
-* Duplicate request with the same ID is rejected
-
----
-
-### 7. Generic HTTP Connector
-
-The Generic HTTP Connector sends HTTP requests.
-
-Endpoint:
-
-```http
-POST /connectors/http/test
-```
-
-Supported methods:
-
-* GET
-* POST
-* PUT
-* DELETE
-
----
-
-### 8. OAuth2 Authorization Flow
-
-OAuth connections can be created and stored per tenant.
-
-Endpoint:
-
-```http
-POST /oauth/:provider/connect
-```
-
-Supported providers in Phase 2:
-
-* slack
-* stripe
-* google
-
-OAuth tokens are encrypted before storage.
-
----
-
-### 9. OAuth Connection Listing
-
-OAuth connections can be listed by provider.
-
-Endpoint:
-
-```http
-GET /oauth/:provider/connections
+```bash
+scripts/archive-audit-log.ps1
 ```
 
 ---
 
-### 10. Access Token Refresh
+## Connectors
 
-Stored OAuth connections support access token refresh.
+Implemented connectors include:
 
-Endpoint:
-
-```http
-POST /oauth/:connectionId/refresh
-```
-
----
-
-### 11. Refresh Token Rotation
-
-When a token refresh occurs:
-
-* A new access token is generated
-* A new refresh token is generated
-* The new tokens are encrypted
-* The old encrypted tokens are replaced
-* updated_at is updated
-* expires_at is renewed
+* Generic HTTP Connector
+* Slack Connector
+* Stripe Connector
+* Google Workspace Connector
 
 ---
 
-### 12. OAuth Audit Logging
+## OAuth Support
 
-OAuth actions are written to audit_log.
+Supported providers:
 
-Logged actions:
+* Slack
+* Stripe
+* Google
 
-```txt
-oauth.connected
-oauth.token_refreshed
-```
+Capabilities:
 
----
-
-### 13. Slack Connector
-
-The Slack connector uses a stored Slack OAuth connection.
-
-Endpoint:
-
-```http
-POST /connectors/slack/message
-```
-
-Implemented behavior:
-
-* Retrieves Slack OAuth connection
-* Decrypts Slack access token
-* Validates message payload
-* Preserves tenant isolation
-* Simulates Slack message delivery
-
----
-
-### 14. Stripe Connector
-
-The Stripe connector uses a stored Stripe OAuth connection.
-
-Endpoint:
-
-```http
-POST /connectors/stripe/customers
-```
-
-Implemented behavior:
-
-* Retrieves Stripe OAuth connection
-* Decrypts Stripe access token
-* Validates customer payload
-* Preserves tenant isolation
-* Simulates Stripe customer creation
-
----
-
-### 15. Google Workspace Connector
-
-The Google Workspace connector uses a stored Google OAuth connection.
-
-Endpoint:
-
-```http
-POST /connectors/google/sheets/append
-```
-
-Implemented behavior:
-
-* Retrieves Google OAuth connection
-* Decrypts Google access token
-* Validates spreadsheet append payload
-* Preserves tenant isolation
-* Simulates Google Sheets row append
-
----
-
-# Phase 2 Test Summary
-
-Completed tests:
-
-* Credential creation
-* Encrypted credential storage
-* Credential retrieval and decryption
-* Credential rotation
-* Credential rotation audit logging
-* Webhook missing signature rejection
-* Webhook invalid signature rejection
-* Webhook valid signature acceptance
-* Replay attack prevention
-* Generic HTTP connector
 * OAuth connection creation
 * OAuth connection listing
 * Access token refresh
 * Refresh token rotation
-* OAuth audit verification
-* Slack connector message execution
-* Stripe connector customer creation
-* Google Sheets append execution
+* Encrypted token storage
 
 ---
 
-# Phase 2 Final Status
+## Administrative Features
 
-Completed:
+* Tenant administration APIs
+* Execution log APIs
+* Credential management
+* Workflow monitoring
+* Audit visibility
+
+---
+
+## Testing and Verification
+
+Security verification:
+
+```bash
+scripts/security-pen-test.ps1
+```
+
+GDPR verification:
+
+```bash
+scripts/test-gdpr-erasure.ps1
+```
+
+TTL verification:
+
+```bash
+scripts/test-ttl-pruning.ps1
+```
+
+---
+
+## Project Status
+
+### Phase 1 – Secure Core
+
+Completed.
+
+Implemented:
+
+* Tenant isolation
+* RLS enforcement
+* JWT authentication
+* BullMQ orchestration
+* Audit logging
+* Workflow execution logging
+
+---
+
+### Phase 2 – Credentials, OAuth, Webhooks, and Connectors
+
+Completed.
+
+Implemented:
 
 * Credential Vault
 * Credential Encryption
-* Credential Retrieval and Decryption
 * Credential Rotation
-* Credential Rotation Audit Logging
-* Webhook HMAC Verification
-* Replay Attack Prevention
-* Generic HTTP Connector
-* OAuth2 Authorization Flow
-* Access Token Refresh
-* Refresh Token Rotation
-* OAuth Audit Logging
-* Slack Connector
-* Stripe Connector
-* Google Workspace Connector
+* OAuth Integrations
+* OAuth Token Refresh
+* Connector Framework
+* Replay Protection
+* Webhook Verification
 
-Remaining:
+---
 
-```txt
-None
-```
+### Phase 3 – Operations and Administration
 
-Current status:
+Completed.
 
-```txt
-Phase 1 Secure Core Completed
-Phase 2 OAuth and Connector Integrations Completed
-```
+Implemented:
+
+* Administration APIs
+* Execution APIs
+* Web UI
+* Monitoring Integration
+
+---
+
+### Phase 4 – Compliance, Monitoring, and Production Readiness
+
+Completed.
+
+Implemented:
+
+* GDPR Erasure
+* TTL Pruning
+* Audit Hash Chaining
+* WORM Archival
+* Prometheus Metrics
+* Security Penetration Tests
+* Production Docker Deployment
+* Operational Documentation
+
+---
+
