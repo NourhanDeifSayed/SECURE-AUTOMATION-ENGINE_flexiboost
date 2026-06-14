@@ -8,23 +8,19 @@ export type WorkflowJobData = {
 
 export const workflowQueue = new Queue<WorkflowJobData>("workflow-execution", {
   connection: {
-    host: "127.0.0.1",
-    port: 6379,
+    host: process.env.REDIS_HOST || "127.0.0.1",
+    port: Number(process.env.REDIS_PORT || 6379),
   },
 });
 
 export async function enqueueWorkflowExecution(data: WorkflowJobData) {
-  return workflowQueue.add(
-    "workflow.execute",
-    data,
-    {
-      attempts: 3,
-      backoff: {
-        type: "exponential",
-        delay: 1000,
-      },
-      removeOnComplete: false,
-      removeOnFail: false,
-    }
-  );
+  return workflowQueue.add("workflow.execute", data, {
+    attempts: 3,
+    backoff: {
+      type: "exponential",
+      delay: 1000,
+    },
+    removeOnComplete: false,
+    removeOnFail: false,
+  });
 }

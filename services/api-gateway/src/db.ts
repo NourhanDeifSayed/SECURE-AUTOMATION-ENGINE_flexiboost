@@ -2,7 +2,7 @@ import { Pool, PoolClient } from "pg";
 
 export const pool = new Pool({
   host: "127.0.0.1",
-  port: 55432,
+  port: 15432,
   database: "sae",
   user: "app_user",
   password: "app_password",

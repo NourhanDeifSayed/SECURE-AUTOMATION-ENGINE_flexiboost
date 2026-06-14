@@ -4,3 +4,6 @@ secrets/
 .env
 .env.*
 worm-archive/
+Add-Content .\.gitignore "`n.env"
+Add-Content .\.gitignore "secrets/"
+Add-Content .\.gitignore "worm-archive/"

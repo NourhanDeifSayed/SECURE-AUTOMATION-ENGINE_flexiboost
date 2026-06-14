@@ -1,0 +1,38 @@
+groups:
+  - name: flexiboost-alerts
+    rules:
+      - alert: FlexiBoostApiDown
+        expr: up{job="flexiboost-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "FlexiBoost API is down"
+          description: "Prometheus cannot scrape the FlexiBoost API /metrics endpoint."
+
+      - alert: FlexiBoostHighAuthFailures
+        expr: increase(flexiboost_auth_failures_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High authentication failure rate"
+          description: "More than 5 authentication failures were detected in the last 5 minutes."
+
+      - alert: FlexiBoostHighHttpLatency
+        expr: histogram_quantile(0.95, sum(rate(flexiboost_http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High API latency"
+          description: "p95 HTTP request latency is above 1 second."
+
+      - alert: FlexiBoostHttp5xxErrors
+        expr: increase(flexiboost_http_requests_total{status_code=~"5.."}[5m]) > 3
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High API 5xx error rate"
+          description: "More than 3 HTTP 5xx errors occurred in the last 5 minutes."

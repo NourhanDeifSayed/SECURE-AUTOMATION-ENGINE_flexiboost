@@ -4,7 +4,7 @@ import { Pool } from "pg";
 
 const db = new Pool({
   host: "127.0.0.1",
-  port: 55432,
+  port: Number(process.env.DB_PORT ?? 15432),
   database: "sae",
   user: "app_user",
   password: "app_password",
@@ -157,6 +157,63 @@ vaultRouter.get("/:id", async (req: Request, res: Response) => {
   }
 });
 
+vaultRouter.post("/:id/test", async (req: Request, res: Response) => {
+  try {
+    const { tenant_id } = req.body;
+    const credentialId = req.params.id;
+
+    if (!tenant_id) {
+      return res.status(400).json({ error: "tenant_id is required" });
+    }
+
+    const client = await db.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      await client.query(
+        "SELECT set_config('app.current_tenant_id', $1, true)",
+        [tenant_id]
+      );
+
+      const result = await client.query(
+        `SELECT id, service_name, encrypted_payload, iv
+         FROM credential_vault
+         WHERE id = $1`,
+        [credentialId]
+      );
+
+      if (result.rows.length === 0) {
+        await client.query("COMMIT");
+        return res.status(404).json({ error: "Credential not found" });
+      }
+
+      const credential = result.rows[0];
+
+      decryptCredential(credential.encrypted_payload, credential.iv);
+
+      await client.query("COMMIT");
+
+      return res.json({
+        valid: true,
+        credential_id: credential.id,
+        service_name: credential.service_name,
+        message: "Credential decrypted successfully without exposing plaintext",
+      });
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error: "Credential test failed",
+    });
+  }
+});
+
 vaultRouter.post("/:id/rotate", async (req: Request, res: Response) => {
   try {
     const { tenant_id, new_secret, user_id } = req.body;
@@ -243,10 +300,9 @@ vaultRouter.delete("/:id", async (req: Request, res: Response) => {
         [tenant_id]
       );
 
-      await client.query(
-        `DELETE FROM credential_vault WHERE id = $1`,
-        [credentialId]
-      );
+      await client.query(`DELETE FROM credential_vault WHERE id = $1`, [
+        credentialId,
+      ]);
 
       await client.query("COMMIT");
 

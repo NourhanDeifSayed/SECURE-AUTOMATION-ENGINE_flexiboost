@@ -1,12 +1,26 @@
 import { Worker } from "bullmq";
 import { Pool } from "pg";
+import fs from "fs";
+
+function readSecretFile(path?: string) {
+  if (!path) return undefined;
+
+  try {
+    return fs.readFileSync(path, "utf8").trim();
+  } catch {
+    return undefined;
+  }
+}
 
 const db = new Pool({
-  host: "127.0.0.1",
-  port: 55432,
-  database: "sae",
-  user: "app_user",
-  password: "app_password",
+  host: process.env.DB_HOST || "127.0.0.1",
+  port: Number(process.env.DB_PORT || 15432),
+  database: process.env.DB_NAME || "sae",
+  user: process.env.DB_USER || "app_user",
+  password:
+    readSecretFile(process.env.DB_PASSWORD_FILE) ||
+    process.env.DB_PASSWORD ||
+    "app_password",
   ssl: false,
   max: 1,
 });
@@ -47,12 +61,16 @@ export const workflowWorker = new Worker(
           tenant_id,
           workflow_id,
           status,
+          started_at,
+          completed_at,
           ttl_delete_after
         )
         VALUES (
           $1,
           $2,
           'success',
+          now(),
+          now(),
           now() + interval '30 days'
         )
         `,
@@ -95,8 +113,8 @@ export const workflowWorker = new Worker(
   },
   {
     connection: {
-      host: "127.0.0.1",
-      port: 6379,
+      host: process.env.REDIS_HOST || "127.0.0.1",
+      port: Number(process.env.REDIS_PORT || 6379),
     },
   }
 );
